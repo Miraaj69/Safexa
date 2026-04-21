@@ -4,7 +4,7 @@ import {
   Animated, PanResponder, Dimensions,
 } from 'react-native';
 import { COLORS, SPACING, RADIUS, FONT } from './Constants_theme';
-import { StatusBadge, Row } from './UIComponents';
+import { StatusBadge, Row } from './Components_UIComponents';
 import { PLANTS, CHECKLISTS } from './Constants_data';
 
 const SCREEN_W  = Dimensions.get('window').width;

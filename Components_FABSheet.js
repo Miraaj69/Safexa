@@ -5,7 +5,7 @@ import {
   TextInput, Switch,
 } from 'react-native';
 import { COLORS, SPACING, RADIUS, FONT } from './Constants_theme';
-import { Button, Row, Spacer, Divider } from './UIComponents';
+import { Button, Row, Spacer, Divider } from './Components_UIComponents';
 import { PLANTS, CHECKLISTS, FREQUENCIES } from './Constants_data';
 import { useApp } from './Context_AppContext';
 import dayjs from 'dayjs';

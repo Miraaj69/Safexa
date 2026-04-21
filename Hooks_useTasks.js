@@ -1,5 +1,5 @@
-import { useApp } from '../context/AppContext';
-import { groupTasksByStatus, groupTasksByPlant } from '../utils/helpers';
+import { useApp } from './Context_AppContext';
+import { groupTasksByStatus, groupTasksByPlant } from './Utils_helpers';
 import { useMemo } from 'react';
 
 export function useTasks() {

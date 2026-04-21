@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { COLORS } from '../constants/theme';
-import { getStatusColor, getFreqLabel } from '../utils/helpers';
+import { COLORS } from './Constants_theme';
+import { getStatusColor, getFreqLabel } from './Utils_helpers';
 
 const FREQ_COLORS = {
   W: { bg: 'rgba(34,197,94,0.15)',  text: '#4ade80' },

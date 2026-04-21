@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { COLORS } from '../constants/theme';
+import { COLORS } from './Constants_theme';
 
 export default function StatCard({ label, value, valueColor, sub, onPress }) {
   return (

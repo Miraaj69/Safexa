@@ -4,13 +4,13 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../constants/theme';
+import { COLORS } from './Constants_theme';
 
-import HomeScreen      from '../screens/HomeScreen';
-import TasksScreen     from '../screens/TasksScreen';
-import TaskDetailScreen from '../screens/TaskDetailScreen';
-import ReportsScreen   from '../screens/ReportsScreen';
-import MasterScreen    from '../screens/MasterScreen';
+import HomeScreen      from './Screens_HomeScreen';
+import TasksScreen     from './Screens_TasksScreen';
+import TaskDetailScreen from './Screens_TaskDetailScreen';
+import ReportsScreen   from './Screens_ReportsScreen';
+import MasterScreen    from './Screens_MasterScreen';
 
 const Tab   = createBottomTabNavigator();
 const Stack = createStackNavigator();

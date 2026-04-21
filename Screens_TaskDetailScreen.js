@@ -6,10 +6,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { useApp } from '../context/AppContext';
-import { COLORS } from '../constants/theme';
-import { getStatusColor, getStatusLabel, getFreqLabel, formatDate } from '../utils/helpers';
-import { TASK_STATUS } from '../constants/equipments';
+import { useApp } from './Context_AppContext';
+import { COLORS } from './Constants_theme';
+import { getStatusColor, getStatusLabel, getFreqLabel, formatDate } from './Utils_helpers';
+import { TASK_STATUS } from './Constants_equipments';
 
 export default function TaskDetailScreen({ navigation, route }) {
   const { task } = route.params;

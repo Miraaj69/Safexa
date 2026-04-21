@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { initialState } from '../initialState';
-import { generateDailyTasks, loadTasksForDate, updateTask } from '../utils/taskGenerator';
-import { getTodayString } from '../utils/helpers';
-import { TASK_STATUS } from '../constants/equipments';
+import { initialState } from './initialState';
+import { generateDailyTasks, loadTasksForDate, updateTask } from './Utils_taskGenerator';
+import { getTodayString } from './Utils_helpers';
+import { TASK_STATUS } from './Constants_equipments';
 
 const AppContext = createContext(null);
 

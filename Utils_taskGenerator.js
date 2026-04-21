@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { EQUIPMENTS, TASK_STATUS } from '../constants/equipments';
-import { PLANTS, PLANT_SCHEDULE } from '../constants/plants';
+import { EQUIPMENTS, TASK_STATUS } from './Constants_equipments';
+import { PLANTS, PLANT_SCHEDULE } from './Constants_plants';
 import dayjs from 'dayjs';
 import weekOfYear from 'dayjs/plugin/weekOfYear';
 import 'react-native-get-random-values';

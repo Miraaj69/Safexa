@@ -4,14 +4,14 @@ import {
   TouchableOpacity, RefreshControl, StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useApp } from '../context/AppContext';
-import { COLORS } from '../constants/theme';
-import { groupTasksByStatus, groupTasksByPlant, formatDate } from '../utils/helpers';
-import { PLANTS } from '../constants/plants';
-import ScoreRing from '../components/ScoreRing';
-import StatCard  from '../components/StatCard';
-import PlantCard from '../components/PlantCard';
-import TaskCard  from '../components/TaskCard';
+import { useApp } from './Context_AppContext';
+import { COLORS } from './Constants_theme';
+import { groupTasksByStatus, groupTasksByPlant, formatDate } from './Utils_helpers';
+import { PLANTS } from './Constants_plants';
+import ScoreRing from './Components_ScoreRing';
+import StatCard  from './Components_StatCard';
+import PlantCard from './Components_PlantCard';
+import TaskCard  from './Components_TaskCard';
 import dayjs from 'dayjs';
 
 export default function HomeScreen({ navigation }) {

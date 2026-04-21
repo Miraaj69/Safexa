@@ -5,11 +5,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../constants/theme';
-import { PLANTS } from '../constants/plants';
-import { EQUIPMENTS } from '../constants/equipments';
-import { getMonthlyStats } from '../utils/taskGenerator';
-import { getFreqLabel } from '../utils/helpers';
+import { COLORS } from './Constants_theme';
+import { PLANTS } from './Constants_plants';
+import { EQUIPMENTS } from './Constants_equipments';
+import { getMonthlyStats } from './Utils_taskGenerator';
+import { getFreqLabel } from './Utils_helpers';
 import dayjs from 'dayjs';
 
 export default function ReportsScreen() {

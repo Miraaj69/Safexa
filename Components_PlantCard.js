@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { COLORS } from '../constants/theme';
+import { COLORS } from './Constants_theme';
 
 export default function PlantCard({ plant, pct, overdue, total, onPress }) {
   const badgeColor = overdue > 0 ? COLORS.red : COLORS.green;

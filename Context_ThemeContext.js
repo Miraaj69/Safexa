@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react';
-import { COLORS, SPACING, RADIUS } from '../constants/theme';
+import { COLORS, SPACING, RADIUS } from './Constants_theme';
 
 const ThemeContext = createContext(null);
 

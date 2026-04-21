@@ -5,9 +5,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../constants/theme';
-import { EQUIPMENTS, FREQ_LABELS } from '../constants/equipments';
-import { PLANTS } from '../constants/plants';
+import { COLORS } from './Constants_theme';
+import { EQUIPMENTS, FREQ_LABELS } from './Constants_equipments';
+import { PLANTS } from './Constants_plants';
 
 const FREQ_COLORS = {
   W: { bg: 'rgba(34,197,94,0.15)',   text: '#4ade80' },
@@ -109,7 +109,7 @@ export default function MasterScreen() {
                 <Text style={styles.plantId}>ID: {item.id}</Text>
               </View>
               <Text style={styles.plantEquipCount}>
-                {Object.keys(require('../constants/plants').PLANT_SCHEDULE[item.id] || {}).length} equipments
+                {Object.keys(require('./Constants_plants').PLANT_SCHEDULE[item.id] || {}).length} equipments
               </Text>
             </View>
           )}

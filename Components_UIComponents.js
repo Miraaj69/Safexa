@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { COLORS } from '../constants/theme';
+import { COLORS } from './Constants_theme';
 
 // Divider
 export function Divider({ style }) {

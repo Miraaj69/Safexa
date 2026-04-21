@@ -5,10 +5,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useApp } from '../context/AppContext';
-import { COLORS } from '../constants/theme';
-import { PLANTS } from '../constants/plants';
-import TaskCard from '../components/TaskCard';
+import { useApp } from './Context_AppContext';
+import { COLORS } from './Constants_theme';
+import { PLANTS } from './Constants_plants';
+import TaskCard from './Components_TaskCard';
 
 const STATUS_FILTERS = [
   { key: 'all',     label: 'All' },

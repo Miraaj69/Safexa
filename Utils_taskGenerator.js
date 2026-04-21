@@ -1,10 +1,12 @@
+import * as Crypto from 'expo-crypto';
+const uuidv4 = () => Crypto.randomUUID();
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { EQUIPMENTS, TASK_STATUS } from './Constants_equipments';
 import { PLANTS, PLANT_SCHEDULE } from './Constants_plants';
 import dayjs from 'dayjs';
 import weekOfYear from 'dayjs/plugin/weekOfYear';
-import 'react-native-get-random-values';
-import { v4 as uuidv4 } from 'uuid';
+
+
 
 dayjs.extend(weekOfYear);
 

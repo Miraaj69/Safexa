@@ -1,0 +1,137 @@
+// Plant Master Data
+export const PLANTS = [
+  { id: 'AVTL2', name: 'AVTL 2', color: '#4f7cff' },
+  { id: 'AVTL3', name: 'AVTL 3', color: '#22c55e' },
+  { id: 'CRL3',  name: 'CRL 3',  color: '#f59e0b' },
+  { id: 'AVTL4', name: 'AVTL 4', color: '#7c5fff' },
+  { id: 'AVTL5', name: 'AVTL 5', color: '#ec4899' },
+  { id: 'CRL1',  name: 'CRL 1',  color: '#06b6d4' },
+  { id: 'CRL2',  name: 'CRL 2',  color: '#f97316' },
+];
+
+// Schedule mapping: plantId -> equipmentId -> { months[], weeks[] }
+// months: 1-12, weeks: 1-4 (week of month)
+// For quarterly: months array has the specific months in that quarter pattern
+// For weekly: every week of every month
+
+export const PLANT_SCHEDULE = {
+  AVTL2: {
+    E01: { months: [1,4,7,10], weeks: [1] },   // Quarterly JAN/APR/JUL/OCT
+    E02: { months: [1,4,7,10], weeks: [1] },
+    E03: { months: [1,4,7,10], weeks: [1] },
+    E04: { months: [1,4,7,10], weeks: [1] },
+    E05: { months: [1,4,7,10], weeks: [1] },
+    E06: { months: [1,4,7,10], weeks: [1] },
+    E07: { months: [2],        weeks: [1] },   // Yearly FEB
+    E08: { months: 'ALL',      weeks: [1] },   // Monthly 1ST WEEK
+    E09: { months: 'ALL',      weeks: [2] },   // Monthly 2ND WEEK
+    E10: { months: 'ALL',      weeks: [1,2,3] }, // Weekly
+    E11: { months: 'ALL',      weeks: [1] },
+    E12: { months: 'ALL',      weeks: [1] },
+    E13: { months: 'ALL',      weeks: [1] },
+    E14: { months: 'ALL',      weeks: [4] },
+    E15: { months: 'ALL',      weeks: [2] },
+  },
+  AVTL3: {
+    E01: { months: [2,5,8,11], weeks: [1] },   // Phase 2: FEB/MAY/AUG/NOV
+    E02: { months: [2,5,8,11], weeks: [1] },
+    E03: { months: [2,5,8,11], weeks: [1] },
+    E04: { months: [2,5,8,11], weeks: [1] },
+    E05: { months: [2,5,8,11], weeks: [1] },
+    E06: { months: [2,5,8,11], weeks: [1] },
+    E07: { months: [3],        weeks: [1] },   // Yearly MAR
+    E08: { months: 'ALL',      weeks: [1] },
+    E09: { months: 'ALL',      weeks: [1] },
+    E10: { months: 'ALL',      weeks: [1,2,3,4] },
+    E11: { months: 'ALL',      weeks: [2] },
+    E12: { months: 'ALL',      weeks: [2] },
+    E13: { months: 'ALL',      weeks: [2] },
+    E14: { months: 'ALL',      weeks: [4] },
+    E15: { months: 'ALL',      weeks: [2] },
+  },
+  CRL3: {
+    E01: { months: [2,5,8,11], weeks: [1] },
+    E02: { months: [2,5,8,11], weeks: [1] },
+    E03: { months: [2,5,8,11], weeks: [1] },
+    E04: { months: [2,5,8,11], weeks: [1] },
+    E05: { months: [2,5,8,11], weeks: [1] },
+    E06: { months: [2,5,8,11], weeks: [1] },
+    E07: { months: [5],        weeks: [1] },   // Yearly MAY
+    E08: { months: 'ALL',      weeks: [1] },
+    E09: { months: 'ALL',      weeks: [1] },
+    E10: { months: 'ALL',      weeks: [2,3,4] },
+    E11: { months: 'ALL',      weeks: [4] },
+    E12: { months: 'ALL',      weeks: [3] },
+    E13: { months: 'ALL',      weeks: [3] },
+    E14: { months: 'ALL',      weeks: [4] },
+    E15: { months: 'ALL',      weeks: [1] },
+  },
+  AVTL4: {
+    E01: { months: [3,6,9,12], weeks: [1] },
+    E02: { months: [3,6,9,12], weeks: [1] },
+    E03: { months: [3,6,9,12], weeks: [1] },
+    E04: { months: [3,6,9,12], weeks: [1] },
+    E05: { months: [3,6,9,12], weeks: [1] },
+    E06: { months: [3,6,9,12], weeks: [1] },
+    E07: { months: [4],        weeks: [1] },
+    E08: { months: 'ALL',      weeks: [1] },
+    E09: { months: 'ALL',      weeks: [2] },
+    E10: { months: 'ALL',      weeks: [1,2,3,4] },
+    E11: { months: 'ALL',      weeks: [3] },
+    E12: { months: 'ALL',      weeks: [3] },
+    E13: { months: 'ALL',      weeks: [3] },
+    E14: { months: 'ALL',      weeks: [4] },
+    E15: { months: 'ALL',      weeks: [2] },
+  },
+  AVTL5: {
+    E01: { months: [3,6,9,12], weeks: [1] },
+    E02: { months: [3,6,9,12], weeks: [1] },
+    E03: { months: [3,6,9,12], weeks: [1] },
+    E04: { months: [3,6,9,12], weeks: [1] },
+    E05: { months: [3,6,9,12], weeks: [1] },
+    E06: { months: 'NONE',     weeks: [] },
+    E07: { months: 'NONE',     weeks: [] },
+    E08: { months: 'ALL',      weeks: [1] },
+    E09: { months: 'ALL',      weeks: [2] },
+    E10: { months: 'ALL',      weeks: [1,2,3,4] },
+    E11: { months: 'NONE',     weeks: [] },
+    E12: { months: 'ALL',      weeks: [4] },
+    E13: { months: 'ALL',      weeks: [4] },
+    E14: { months: 'NONE',     weeks: [] },
+    E15: { months: 'ALL',      weeks: [2] },
+  },
+  CRL1: {
+    E01: { months: [1,4,7,10], weeks: [1] },
+    E02: { months: [1,4,7,10], weeks: [1] },
+    E03: { months: [1,4,7,10], weeks: [1] },
+    E04: { months: [1,4,7,10], weeks: [1] },
+    E05: { months: [1,4,7,10], weeks: [1] },
+    E06: { months: [1,4,7,10], weeks: [1] },
+    E07: { months: [1],        weeks: [1] },
+    E08: { months: 'ALL',      weeks: [1] },
+    E09: { months: 'ALL',      weeks: [1] },
+    E10: { months: 'ALL',      weeks: [2,3,4] },
+    E11: { months: 'NONE',     weeks: [] },
+    E12: { months: 'ALL',      weeks: [4] },
+    E13: { months: 'ALL',      weeks: [4] },
+    E14: { months: 'NONE',     weeks: [] },
+    E15: { months: 'ALL',      weeks: [1] },
+  },
+  CRL2: {
+    E01: { months: [2,5,8,11], weeks: [1] },
+    E02: { months: [2,5,8,11], weeks: [1] },
+    E03: { months: [2,5,8,11], weeks: [1] },
+    E04: { months: [2,5,8,11], weeks: [1] },
+    E05: { months: [2,5,8,11], weeks: [1] },
+    E06: { months: [2,5,8,11], weeks: [1] },
+    E07: { months: [2],        weeks: [1] },
+    E08: { months: 'ALL',      weeks: [1] },
+    E09: { months: 'ALL',      weeks: [2] },
+    E10: { months: 'ALL',      weeks: [3,4] },
+    E11: { months: 'ALL',      weeks: [2] },
+    E12: { months: 'ALL',      weeks: [3] },
+    E13: { months: 'ALL',      weeks: [3] },
+    E14: { months: 'ALL',      weeks: [4] },
+    E15: { months: 'ALL',      weeks: [2] },
+  },
+};

@@ -1,197 +1,209 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, TextInput, Image, Alert, ActivityIndicator,
+  View, Text, ScrollView, StyleSheet,
+  TextInput, TouchableOpacity, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
+import { COLORS, SPACING, RADIUS, FONT } from './Constants_theme';
+import { Card, Button, Row, Spacer, StatusBadge, Badge } from './Components_UIComponents';
 import { useApp } from './Context_AppContext';
-import { COLORS } from './Constants_theme';
-import { getStatusColor, getStatusLabel, getFreqLabel, formatDate } from './Utils_helpers';
-import { TASK_STATUS } from './Constants_equipments';
+import { PLANTS, CHECKLISTS, FREQUENCIES } from './Constants_data';
+import dayjs from 'dayjs';
 
-export default function TaskDetailScreen({ navigation, route }) {
+export default function TaskDetailScreen({ route, navigation }) {
   const { task } = route.params;
-  const { completeTask, refreshTasks } = useApp();
+  const { completeTask, deleteTask, state } = useApp();
+  const [remark,  setRemark]  = useState(task.remark || '');
+  const [loading, setLoading] = useState(false);
 
-  const [remarks,  setRemarks]  = useState(task.remarks || '');
-  const [photoUri, setPhotoUri] = useState(task.photoUri || null);
-  const [loading,  setLoading]  = useState(false);
-
-  const isCompleted = task.status === TASK_STATUS.DONE;
-  const statusColor = getStatusColor(task.status);
-
-  const pickPhoto = async () => {
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.7,
-      allowsEditing: true,
-      aspect: [4, 3],
-    });
-    if (!result.canceled) setPhotoUri(result.assets[0].uri);
-  };
-
-  const pickFromGallery = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.7,
-    });
-    if (!result.canceled) setPhotoUri(result.assets[0].uri);
-  };
+  const plant     = state.plants.find(p => p.id === task.plantId) || PLANTS.find(p => p.id === task.plantId);
+  const checklist = state.checklists.find(c => c.id === task.checklistId) || CHECKLISTS.find(c => c.id === task.checklistId);
+  const freq      = FREQUENCIES[checklist?.defaultFreq?.toUpperCase()] || {};
 
   const handleComplete = async () => {
     setLoading(true);
-    try {
-      await completeTask(task.id, {
-        remarks,
-        photoUri,
-        completedAt: new Date().toISOString(),
-      });
-      await refreshTasks();
-      Alert.alert('✅ Done!', 'Task marked as completed.', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
-    } catch (err) {
-      Alert.alert('Error', 'Could not complete task. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    completeTask(task.id, remark);
+    setLoading(false);
+    navigation.goBack();
   };
 
-  const showPhotoOptions = () => {
-    Alert.alert('Add Photo', 'Choose source', [
-      { text: 'Camera',  onPress: pickPhoto },
-      { text: 'Gallery', onPress: pickFromGallery },
-      { text: 'Cancel',  style: 'cancel' },
+  const handleDelete = () => {
+    Alert.alert('Delete Task', 'Are you sure?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive',
+        onPress: () => { deleteTask(task.id); navigation.goBack(); },
+      },
     ]);
   };
 
+  const infoRows = [
+    { label: 'Checklist No', value: checklist?.no },
+    { label: 'Plant',        value: plant?.name    },
+    { label: 'Date',         value: dayjs(task.date).format('DD MMM YYYY') },
+    { label: 'Frequency',    value: freq.label || checklist?.defaultFreq },
+    { label: 'Status',       value: null, badge: true },
+    { label: 'Created',      value: dayjs(task.createdAt).format('DD MMM, HH:mm') },
+    ...(task.completedAt ? [{
+      label: 'Completed',
+      value: dayjs(task.completedAt).format('DD MMM, HH:mm'),
+    }] : []),
+  ];
+
   return (
     <SafeAreaView style={styles.safe}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={20} color={COLORS.text1} />
-        </TouchableOpacity>
-        <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={styles.headerTitle} numberOfLines={1}>{task.equipmentName}</Text>
-          <Text style={styles.headerSub}>{task.plantName} · {task.checklistNo}</Text>
-        </View>
-        <View style={[styles.statusBadge, { backgroundColor: statusColor + '22' }]}>
-          <Text style={[styles.statusText, { color: statusColor }]}>
-            {getStatusLabel(task.status)}
-          </Text>
-        </View>
-      </View>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        {/* Header */}
+        <Row style={{ marginBottom: SPACING.xl }}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Text style={styles.backText}>‹</Text>
+          </TouchableOpacity>
+          <Text style={styles.title} numberOfLines={2}>{checklist?.name}</Text>
+        </Row>
+
+        {/* Status Banner */}
+        <View style={[styles.statusBanner, {
+          backgroundColor:
+            task.status === 'completed' ? COLORS.successDim :
+            task.status === 'overdue'   ? COLORS.dangerDim  : COLORS.warningDim,
+          borderColor:
+            task.status === 'completed' ? COLORS.success :
+            task.status === 'overdue'   ? COLORS.danger  : COLORS.warning,
+        }]}>
+          <Row style={{ justifyContent: 'space-between' }}>
+            <Text style={styles.statusEmoji}>
+              {task.status === 'completed' ? '✅' : task.status === 'overdue' ? '🚨' : '⏳'}
+            </Text>
+            <View style={{ flex: 1, marginLeft: SPACING.sm }}>
+              <Text style={{ color: COLORS.text, fontSize: 15, fontWeight: FONT.semibold }}>
+                {task.status === 'completed' ? 'Task Completed' :
+                 task.status === 'overdue'   ? 'Task Overdue'   : 'Task Pending'}
+              </Text>
+              <Text style={{ color: COLORS.textSub, fontSize: 12, marginTop: 2 }}>
+                {task.date}
+              </Text>
+            </View>
+            <StatusBadge status={task.status} />
+          </Row>
+        </View>
+
         {/* Info Table */}
-        <View style={styles.card}>
-          {[
-            ['Equipment',   task.equipmentName],
-            ['Checklist No.', task.checklistNo],
-            ['Plant',       task.plantName],
-            ['Category',    task.category],
-            ['Frequency',   getFreqLabel(task.freq)],
-            ['Date',        formatDate(task.date)],
-            ...(task.completedAt ? [['Completed At', new Date(task.completedAt).toLocaleString()]] : []),
-          ].map(([label, value]) => (
-            <View key={label} style={styles.infoRow}>
-              <Text style={styles.infoLabel}>{label}</Text>
-              <Text style={styles.infoValue}>{value}</Text>
+        <Card style={styles.infoCard}>
+          {infoRows.map((row, i) => (
+            <View key={row.label}>
+              <Row style={styles.infoRow}>
+                <Text style={styles.infoLabel}>{row.label}</Text>
+                {row.badge
+                  ? <StatusBadge status={task.status} />
+                  : <Text style={styles.infoValue}>{row.value || '—'}</Text>
+                }
+              </Row>
+              {i < infoRows.length - 1 && (
+                <View style={styles.infoDivider} />
+              )}
             </View>
           ))}
-        </View>
+        </Card>
 
-        {/* Remarks */}
-        {!isCompleted && (
+        {/* Plant Indicator */}
+        {plant && (
+          <Row style={[styles.plantRow, { borderColor: plant.color + '30' }]}>
+            <View style={[styles.plantDot, { backgroundColor: plant.color }]} />
+            <Text style={styles.plantName}>{plant.name}</Text>
+            <Badge label={plant.code || ''} color={plant.color} />
+          </Row>
+        )}
+
+        {/* Remark */}
+        {task.status !== 'completed' && (
           <>
-            <Text style={styles.sectionLabel}>Remarks</Text>
+            <Text style={styles.label}>Remark</Text>
             <TextInput
-              style={styles.textarea}
-              placeholder="Add inspection remarks, observations..."
-              placeholderTextColor={COLORS.text3}
-              value={remarks}
-              onChangeText={setRemarks}
+              style={styles.remarkInput}
+              value={remark}
+              onChangeText={setRemark}
+              placeholder="Add inspection remarks..."
+              placeholderTextColor={COLORS.textMuted}
               multiline
               numberOfLines={4}
               textAlignVertical="top"
             />
-
-            {/* Photo */}
-            <Text style={styles.sectionLabel}>Photo Proof 📸</Text>
-            {photoUri ? (
-              <View style={styles.photoPreview}>
-                <Image source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
-                <TouchableOpacity style={styles.removePhoto} onPress={() => setPhotoUri(null)}>
-                  <Ionicons name="close-circle" size={24} color={COLORS.red} />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <TouchableOpacity style={styles.photoBtn} onPress={showPhotoOptions}>
-                <Ionicons name="camera-outline" size={28} color={COLORS.text2} />
-                <Text style={styles.photoBtnText}>Tap to add photo proof</Text>
-                <Text style={styles.photoBtnSub}>Camera or Gallery</Text>
-              </TouchableOpacity>
-            )}
-
-            {/* Complete Button */}
-            <TouchableOpacity
-              style={[styles.completeBtn, loading && { opacity: 0.6 }]}
-              onPress={handleComplete}
-              disabled={loading}
-            >
-              {loading
-                ? <ActivityIndicator color="white" />
-                : <Text style={styles.completeBtnText}>✅ Mark as Completed</Text>
-              }
-            </TouchableOpacity>
           </>
         )}
 
-        {/* If already done — show photo */}
-        {isCompleted && (
-          <View style={styles.doneState}>
-            <Text style={{ fontSize: 40 }}>✅</Text>
-            <Text style={styles.doneTitle}>Task Completed</Text>
-            {task.remarks ? <Text style={styles.doneRemarks}>"{task.remarks}"</Text> : null}
-            {task.photoUri && (
-              <Image source={{ uri: task.photoUri }} style={[styles.photo, { width: '100%' }]} resizeMode="cover" />
-            )}
-          </View>
+        {task.status === 'completed' && task.remark ? (
+          <Card style={{ marginBottom: SPACING.lg }}>
+            <Text style={styles.label}>Remark</Text>
+            <Text style={styles.remarkText}>{task.remark}</Text>
+          </Card>
+        ) : null}
+
+        {/* Actions */}
+        {task.status !== 'completed' && (
+          <>
+            <Button
+              label="Mark as Complete ✓"
+              onPress={handleComplete}
+              loading={loading}
+              variant="success"
+              size="lg"
+              style={{ marginBottom: SPACING.md }}
+            />
+            <Button
+              label="Delete Task"
+              onPress={handleDelete}
+              variant="outline"
+              size="lg"
+              style={{ borderColor: COLORS.danger + '50' }}
+            />
+          </>
         )}
 
-        <View style={{ height: 40 }} />
+        <Spacer size={60} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe:           { flex: 1, backgroundColor: COLORS.bg0 },
-  header:         { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  backBtn:        { width: 36, height: 36, borderRadius: 10, backgroundColor: COLORS.bg2, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
-  headerTitle:    { fontSize: 15, fontWeight: '600', color: COLORS.text1 },
-  headerSub:      { fontSize: 12, color: COLORS.text2, marginTop: 2 },
-  statusBadge:    { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
-  statusText:     { fontSize: 12, fontWeight: '600' },
-  content:        { padding: 16 },
-  card:           { backgroundColor: COLORS.bg2, borderRadius: 16, padding: 4, borderWidth: 1, borderColor: COLORS.border, marginBottom: 16 },
-  infoRow:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  infoLabel:      { fontSize: 13, color: COLORS.text2 },
-  infoValue:      { fontSize: 13, fontWeight: '500', color: COLORS.text1, maxWidth: '55%', textAlign: 'right' },
-  sectionLabel:   { fontSize: 13, color: COLORS.text2, marginBottom: 8, fontWeight: '600' },
-  textarea:       { backgroundColor: COLORS.bg2, borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, padding: 12, color: COLORS.text1, fontSize: 14, minHeight: 90, marginBottom: 16 },
-  photoBtn:       { backgroundColor: COLORS.bg2, borderWidth: 1, borderColor: COLORS.border, borderStyle: 'dashed', borderRadius: 12, padding: 24, alignItems: 'center', marginBottom: 20 },
-  photoBtnText:   { fontSize: 14, color: COLORS.text2, marginTop: 8 },
-  photoBtnSub:    { fontSize: 12, color: COLORS.text3, marginTop: 4 },
-  photoPreview:   { position: 'relative', marginBottom: 20 },
-  photo:          { width: '100%', height: 200, borderRadius: 12 },
-  removePhoto:    { position: 'absolute', top: 8, right: 8 },
-  completeBtn:    { backgroundColor: COLORS.accent, borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 4 },
-  completeBtnText:{ fontSize: 16, fontWeight: '700', color: 'white' },
-  doneState:      { alignItems: 'center', paddingTop: 20, gap: 12 },
-  doneTitle:      { fontSize: 18, fontWeight: '600', color: COLORS.green },
-  doneRemarks:    { fontSize: 14, color: COLORS.text2, fontStyle: 'italic', textAlign: 'center' },
+  safe:    { flex: 1, backgroundColor: COLORS.bg },
+  content: { padding: SPACING.lg },
+  backBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border,
+    alignItems: 'center', justifyContent: 'center',
+    marginRight: SPACING.md,
+  },
+  backText:  { color: COLORS.text, fontSize: 20 },
+  title:     { color: COLORS.text, fontSize: 20, fontWeight: FONT.bold, flex: 1, lineHeight: 28 },
+  statusBanner: {
+    borderRadius: RADIUS.lg, borderWidth: 1,
+    padding: SPACING.lg, marginBottom: SPACING.lg,
+  },
+  statusEmoji: { fontSize: 24 },
+  infoCard:    { marginBottom: SPACING.lg, padding: 0, overflow: 'hidden' },
+  infoRow:     { justifyContent: 'space-between', padding: SPACING.md },
+  infoLabel:   { color: COLORS.textSub, fontSize: 13 },
+  infoValue:   { color: COLORS.text, fontSize: 13, fontWeight: FONT.medium },
+  infoDivider: { height: 1, backgroundColor: COLORS.border },
+  plantRow:    {
+    flexDirection: 'row', alignItems: 'center', gap: SPACING.sm,
+    backgroundColor: COLORS.card, borderRadius: RADIUS.lg, borderWidth: 1,
+    padding: SPACING.md, marginBottom: SPACING.lg,
+  },
+  plantDot:  { width: 10, height: 10, borderRadius: 5 },
+  plantName: { color: COLORS.text, fontSize: 14, fontWeight: FONT.medium, flex: 1 },
+  label: {
+    color: COLORS.textSub, fontSize: 11, fontWeight: FONT.semibold,
+    letterSpacing: 0.5, textTransform: 'uppercase',
+    marginBottom: SPACING.sm,
+  },
+  remarkInput: {
+    backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border,
+    borderRadius: RADIUS.lg, padding: SPACING.md,
+    color: COLORS.text, fontSize: 14, minHeight: 100,
+    marginBottom: SPACING.lg,
+  },
+  remarkText: { color: COLORS.text, fontSize: 14, lineHeight: 22 },
 });

@@ -1,18 +1,22 @@
 export const COLORS = {
-  bg0: '#0d0f14',
-  bg1: '#13161e',
-  bg2: '#1a1d28',
-  bg3: '#22263a',
-  accent: '#4f7cff',
-  accent2: '#7c5fff',
-  green: '#22c55e',
-  red: '#ef4444',
-  amber: '#f59e0b',
-  text1: '#e8eaf0',
-  text2: '#9095a8',
-  text3: '#5a5f72',
-  border: 'rgba(255,255,255,0.07)',
-  white: '#ffffff',
+  primary:       '#4F7CFF',
+  primaryDim:    'rgba(79,124,255,0.15)',
+  bg:            '#0B0F1A',
+  bgDeep:        '#070A12',
+  card:          'rgba(255,255,255,0.04)',
+  cardHover:     'rgba(255,255,255,0.07)',
+  border:        'rgba(255,255,255,0.08)',
+  borderStrong:  'rgba(255,255,255,0.14)',
+  text:          '#F0F4FF',
+  textSub:       'rgba(240,244,255,0.5)',
+  textMuted:     'rgba(240,244,255,0.28)',
+  success:       '#22C55E',
+  successDim:    'rgba(34,197,94,0.15)',
+  warning:       '#F59E0B',
+  warningDim:    'rgba(245,158,11,0.15)',
+  danger:        '#EF4444',
+  dangerDim:     'rgba(239,68,68,0.15)',
+  overlay:       'rgba(0,0,0,0.7)',
 };
 
 export const SPACING = {
@@ -23,21 +27,28 @@ export const RADIUS = {
   sm: 8, md: 12, lg: 16, xl: 20, full: 999,
 };
 
-export const FONTS = {
-  regular: { fontWeight: '400' },
-  medium:  { fontWeight: '500' },
-  semiBold:{ fontWeight: '600' },
-  bold:    { fontWeight: '700' },
+export const FONT = {
+  light:      '300',
+  regular:    '400',
+  medium:     '500',
+  semibold:   '600',
+  bold:       '700',
+  extrabold:  '800',
 };
 
-export const STATUS_COLORS = {
-  pending: '#f59e0b',
-  done:    '#22c55e',
-  overdue: '#ef4444',
-};
-
-export const STATUS_BG = {
-  pending: 'rgba(245,158,11,0.15)',
-  done:    'rgba(34,197,94,0.15)',
-  overdue: 'rgba(239,68,68,0.15)',
+export const SHADOW = {
+  card: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  glow: {
+    shadowColor: '#4F7CFF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 12,
+  },
 };

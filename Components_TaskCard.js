@@ -1,58 +1,180 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { COLORS } from './Constants_theme';
-import { getStatusColor, getFreqLabel } from './Utils_helpers';
+import React, { useRef } from 'react';
+import {
+  View, Text, StyleSheet, TouchableOpacity,
+  Animated, PanResponder, Dimensions,
+} from 'react-native';
+import { COLORS, SPACING, RADIUS, FONT } from './Constants_theme';
+import { StatusBadge, Row } from './UIComponents';
+import { PLANTS, CHECKLISTS } from './Constants_data';
 
-const FREQ_COLORS = {
-  W: { bg: 'rgba(34,197,94,0.15)',  text: '#4ade80' },
-  M: { bg: 'rgba(79,124,255,0.15)', text: '#7ea6ff' },
-  Q: { bg: 'rgba(124,95,255,0.15)', text: '#a58fff' },
-  Y: { bg: 'rgba(245,158,11,0.15)', text: '#fbbf24' },
-};
+const SCREEN_W  = Dimensions.get('window').width;
+const SWIPE_T   = SCREEN_W * 0.25;
 
-const BORDER_COLORS = {
-  overdue: COLORS.red,
-  pending: COLORS.amber,
-  done:    COLORS.green,
-};
+export function TaskCard({ task, onComplete, onDelete, onPress }) {
+  const translateX = useRef(new Animated.Value(0)).current;
+  const scale      = useRef(new Animated.Value(1)).current;
 
-export default function TaskCard({ task, onPress }) {
-  const statusColor = getStatusColor(task.status);
-  const borderColor = BORDER_COLORS[task.status] || COLORS.border;
-  const fc = FREQ_COLORS[task.freq] || FREQ_COLORS.M;
+  const plant    = PLANTS.find(p => p.id === task.plantId);
+  const checklist = CHECKLISTS.find(c => c.id === task.checklistId);
+
+  const panResponder = PanResponder.create({
+    onStartShouldSetPanResponder:   () => true,
+    onMoveShouldSetPanResponder:    (_, g) => Math.abs(g.dx) > 5,
+    onPanResponderMove:             (_, g) => translateX.setValue(g.dx),
+    onPanResponderRelease:          (_, g) => {
+      if (g.dx > SWIPE_T && task.status !== 'completed') {
+        // Swipe right → complete
+        Animated.timing(translateX, { toValue: SCREEN_W, duration: 250, useNativeDriver: true }).start(() => {
+          onComplete?.(task.id);
+          translateX.setValue(0);
+        });
+      } else if (g.dx < -SWIPE_T) {
+        // Swipe left → delete
+        Animated.timing(translateX, { toValue: -SCREEN_W, duration: 250, useNativeDriver: true }).start(() => {
+          onDelete?.(task.id);
+          translateX.setValue(0);
+        });
+      } else {
+        Animated.spring(translateX, { toValue: 0, useNativeDriver: true, tension: 200 }).start();
+      }
+    },
+  });
+
+  const onPressIn = () =>
+    Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, tension: 300 }).start();
+  const onPressOut = () =>
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true, tension: 300 }).start();
+
+  const statusColor = {
+    pending:   COLORS.warning,
+    completed: COLORS.success,
+    overdue:   COLORS.danger,
+  }[task.status];
+
+  // Background hints for swipe
+  const rightBg = translateX.interpolate({
+    inputRange: [0, SWIPE_T],
+    outputRange: ['transparent', COLORS.successDim],
+    extrapolate: 'clamp',
+  });
+  const leftBg = translateX.interpolate({
+    inputRange: [-SWIPE_T, 0],
+    outputRange: [COLORS.dangerDim, 'transparent'],
+    extrapolate: 'clamp',
+  });
 
   return (
-    <TouchableOpacity
-      style={[styles.card, { borderLeftColor: borderColor }, task.status === 'done' && styles.doneCard]}
-      onPress={onPress}
-      activeOpacity={0.75}
-    >
-      <View style={[styles.iconBox, { backgroundColor: statusColor + '22' }]}>
-        <Text style={{ fontSize: 20 }}>{task.icon}</Text>
-      </View>
-      <View style={styles.body}>
-        <Text style={styles.name} numberOfLines={1}>{task.equipmentName}</Text>
-        <Text style={styles.meta}>{task.plantName} · {task.checklistNo}</Text>
-      </View>
-      <View style={styles.right}>
-        <View style={[styles.freqBadge, { backgroundColor: fc.bg }]}>
-          <Text style={[styles.freqText, { color: fc.text }]}>{getFreqLabel(task.freq)}</Text>
-        </View>
-        <View style={[styles.dotStatus, { backgroundColor: statusColor }]} />
-      </View>
-    </TouchableOpacity>
+    <View style={styles.wrapper}>
+      {/* Swipe hint backgrounds */}
+      <Animated.View style={[styles.swipeHint, styles.swipeRight, { backgroundColor: rightBg }]}>
+        <Text style={styles.swipeText}>✓ Done</Text>
+      </Animated.View>
+      <Animated.View style={[styles.swipeHint, styles.swipeLeft, { backgroundColor: leftBg }]}>
+        <Text style={styles.swipeTextRight}>Delete ✕</Text>
+      </Animated.View>
+
+      <Animated.View
+        {...panResponder.panHandlers}
+        style={{ transform: [{ translateX }, { scale }] }}
+      >
+        <TouchableOpacity
+          onPress={() => onPress?.(task)}
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
+          activeOpacity={1}
+        >
+          <View style={[styles.card, { borderLeftColor: statusColor, borderLeftWidth: 3 }]}>
+            <Row style={{ justifyContent: 'space-between', marginBottom: SPACING.sm }}>
+              <View style={[styles.dot, { backgroundColor: plant?.color || COLORS.primary }]} />
+              <Text style={styles.plantName}>{plant?.name || '—'}</Text>
+              <View style={{ flex: 1 }} />
+              <StatusBadge status={task.status} />
+            </Row>
+
+            <Text style={styles.checklistName} numberOfLines={2}>
+              {checklist?.name || 'Unknown Checklist'}
+            </Text>
+
+            <Row style={{ marginTop: SPACING.sm, justifyContent: 'space-between' }}>
+              <Text style={styles.checklistNo}>{checklist?.no}</Text>
+              <Text style={styles.date}>{task.date}</Text>
+            </Row>
+
+            {task.remark ? (
+              <Text style={styles.remark} numberOfLines={1}>
+                💬 {task.remark}
+              </Text>
+            ) : null}
+
+            {task.status === 'pending' && (
+              <Text style={styles.swipeHintText}>← Swipe to complete / delete →</Text>
+            )}
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card:      { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: COLORS.bg2, borderRadius: 14, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: COLORS.border, borderLeftWidth: 3 },
-  doneCard:  { opacity: 0.65 },
-  iconBox:   { width: 42, height: 42, borderRadius: 11, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  body:      { flex: 1, minWidth: 0 },
-  name:      { fontSize: 13, fontWeight: '600', color: COLORS.text1 },
-  meta:      { fontSize: 11, color: COLORS.text2, marginTop: 3 },
-  right:     { alignItems: 'flex-end', gap: 6, flexShrink: 0 },
-  freqBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
-  freqText:  { fontSize: 10, fontWeight: '600' },
-  dotStatus: { width: 8, height: 8, borderRadius: 4, alignSelf: 'center' },
+  wrapper: {
+    position:     'relative',
+    marginBottom: SPACING.md,
+    borderRadius: RADIUS.lg,
+    overflow:     'hidden',
+  },
+  card: {
+    backgroundColor: COLORS.card,
+    borderRadius:    RADIUS.lg,
+    borderWidth:     1,
+    borderColor:     COLORS.border,
+    padding:         SPACING.lg,
+  },
+  dot: {
+    width: 8, height: 8, borderRadius: 4, marginRight: 8,
+  },
+  plantName: {
+    color:      COLORS.textSub,
+    fontSize:   12,
+    fontWeight: FONT.medium,
+  },
+  checklistName: {
+    color:      COLORS.text,
+    fontSize:   15,
+    fontWeight: FONT.semibold,
+    lineHeight: 22,
+  },
+  checklistNo: {
+    color:    COLORS.textMuted,
+    fontSize: 12,
+    fontFamily: 'monospace',
+  },
+  date: {
+    color:    COLORS.textMuted,
+    fontSize: 12,
+  },
+  remark: {
+    color:      COLORS.textSub,
+    fontSize:   12,
+    marginTop:  SPACING.sm,
+    fontStyle:  'italic',
+  },
+  swipeHintText: {
+    color:      COLORS.textMuted,
+    fontSize:   10,
+    textAlign:  'center',
+    marginTop:  SPACING.sm,
+    letterSpacing: 0.3,
+  },
+  swipeHint: {
+    position:       'absolute',
+    top: 0, bottom: 0, left: 0, right: 0,
+    borderRadius:   RADIUS.lg,
+    justifyContent: 'center',
+    paddingHorizontal: SPACING.xl,
+  },
+  swipeRight: { alignItems: 'flex-start' },
+  swipeLeft:  { alignItems: 'flex-end'   },
+  swipeText:      { color: COLORS.success, fontSize: 14, fontWeight: FONT.bold },
+  swipeTextRight: { color: COLORS.danger,  fontSize: 14, fontWeight: FONT.bold },
 });

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Safety Checklist",
+    "name": "Safexa",
     "slug": "safexa",
     "owner": "nidhi2701",
     "version": "1.0.0",
@@ -10,29 +10,29 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0d0f14"
+      "backgroundColor": "#0B0F1A"
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.safety.checklist"
+      "bundleIdentifier": "com.nidhi2701.safexa"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0d0f14"
+        "backgroundColor": "#0B0F1A"
       },
-      "package": "com.safety.checklist",
+      "package": "com.nidhi2701.safexa",
       "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"]
     },
     "plugins": [
-      "expo-camera",
+      "expo-font",
       "expo-image-picker",
       [
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",
-          "color": "#4f7cff"
+          "color": "#4F7CFF"
         }
       ]
     ],

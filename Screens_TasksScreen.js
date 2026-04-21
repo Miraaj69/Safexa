@@ -1,133 +1,216 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, FlatList,
-  TouchableOpacity, TextInput,
+  View, Text, ScrollView, StyleSheet,
+  TouchableOpacity, TextInput, FlatList, Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { COLORS, SPACING, RADIUS, FONT } from './Constants_theme';
+import { EmptyState, Row, Spacer, Badge } from './Components_UIComponents';
+import { TaskCard } from './Components_TaskCard';
+import { FAB, FABSheet } from './Components_FABSheet';
 import { useApp } from './Context_AppContext';
-import { COLORS } from './Constants_theme';
-import { PLANTS } from './Constants_plants';
-import TaskCard from './Components_TaskCard';
+import { PLANTS } from './Constants_data';
 
 const STATUS_FILTERS = [
-  { key: 'all',     label: 'All' },
-  { key: 'overdue', label: '🚨 Overdue' },
-  { key: 'pending', label: '⏳ Pending' },
-  { key: 'done',    label: '✅ Done' },
+  { id: 'all',      label: 'All'     },
+  { id: 'pending',  label: 'Pending' },
+  { id: 'overdue',  label: 'Overdue' },
+  { id: 'completed',label: 'Done'    },
 ];
 
-export default function TasksScreen({ navigation, route }) {
-  const { state } = useApp();
-  const { tasks } = state;
-
-  const [statusFilter, setStatusFilter] = useState(route?.params?.status || 'all');
-  const [plantFilter,  setPlantFilter]  = useState(route?.params?.plantId || 'ALL');
+export default function TasksScreen({ navigation }) {
+  const { state, completeTask, deleteTask } = useApp();
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [plantFilter,  setPlantFilter]  = useState('all');
   const [search,       setSearch]       = useState('');
+  const [fabOpen,      setFabOpen]      = useState(false);
 
-  useEffect(() => {
-    if (route?.params?.status) setStatusFilter(route.params.status);
-    if (route?.params?.plantId) setPlantFilter(route.params.plantId);
-  }, [route?.params]);
+  const filteredTasks = useMemo(() => {
+    let tasks = [...state.tasks].sort((a, b) => {
+      // Overdue first, then pending, then completed
+      const order = { overdue: 0, pending: 1, completed: 2 };
+      return (order[a.status] ?? 3) - (order[b.status] ?? 3);
+    });
 
-  const filtered = tasks.filter(t => {
-    const matchStatus = statusFilter === 'all' || t.status === statusFilter;
-    const matchPlant  = plantFilter === 'ALL' || t.plantId === plantFilter;
-    const matchSearch = !search || t.equipmentName.toLowerCase().includes(search.toLowerCase()) || t.plantName.toLowerCase().includes(search.toLowerCase());
-    return matchStatus && matchPlant && matchSearch;
-  });
+    if (statusFilter !== 'all') {
+      tasks = tasks.filter(t => t.status === statusFilter);
+    }
+    if (plantFilter !== 'all') {
+      tasks = tasks.filter(t => t.plantId === plantFilter);
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      const clMap = {};
+      state.checklists.forEach(c => clMap[c.id] = c.name.toLowerCase());
+      tasks = tasks.filter(t =>
+        clMap[t.checklistId]?.includes(q) ||
+        PLANTS.find(p => p.id === t.plantId)?.name.toLowerCase().includes(q)
+      );
+    }
+    return tasks;
+  }, [state.tasks, state.checklists, statusFilter, plantFilter, search]);
+
+  const overdueCount = state.tasks.filter(t => t.status === 'overdue').length;
+
+  const renderItem = useCallback(({ item }) => (
+    <TaskCard
+      task={item}
+      onComplete={(id) => completeTask(id)}
+      onDelete={(id)   => deleteTask(id)}
+      onPress={(task)  => navigation.navigate('TaskDetail', { task })}
+    />
+  ), [completeTask, deleteTask, navigation]);
 
   return (
     <SafeAreaView style={styles.safe}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Tasks</Text>
-        <Text style={styles.sub}>{filtered.length} tasks</Text>
+        {overdueCount > 0 && (
+          <View style={styles.overdueAlert}>
+            <Text style={styles.overdueText}>{overdueCount} overdue</Text>
+          </View>
+        )}
       </View>
 
       {/* Search */}
-      <View style={styles.searchRow}>
-        <Ionicons name="search" size={16} color={COLORS.text3} style={{ marginRight: 8 }} />
+      <View style={styles.searchBar}>
+        <Text style={styles.searchIcon}>🔍</Text>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search equipment or plant..."
-          placeholderTextColor={COLORS.text3}
           value={search}
           onChangeText={setSearch}
+          placeholder="Search tasks..."
+          placeholderTextColor={COLORS.textMuted}
         />
+        {search ? (
+          <TouchableOpacity onPress={() => setSearch('')}>
+            <Text style={{ color: COLORS.textMuted }}>✕</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
-      {/* Status Filter Chips */}
-      <View style={styles.chipRow}>
+      {/* Status Filter */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterRow}
+        contentContainerStyle={{ gap: SPACING.sm, paddingHorizontal: SPACING.lg }}
+      >
         {STATUS_FILTERS.map(f => (
           <TouchableOpacity
-            key={f.key}
-            style={[styles.chip, statusFilter === f.key && styles.chipActive]}
-            onPress={() => setStatusFilter(f.key)}
+            key={f.id}
+            onPress={() => setStatusFilter(f.id)}
+            style={[styles.filterChip, statusFilter === f.id && styles.filterChipActive]}
           >
-            <Text style={[styles.chipText, statusFilter === f.key && styles.chipTextActive]}>
+            <Text style={[styles.filterText, statusFilter === f.id && { color: '#fff' }]}>
               {f.label}
             </Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
 
-      {/* Plant Filter Chips */}
-      <View style={styles.chipRow}>
+      {/* Plant Filter */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterRow}
+        contentContainerStyle={{ gap: SPACING.sm, paddingHorizontal: SPACING.lg }}
+      >
         <TouchableOpacity
-          style={[styles.chip, plantFilter === 'ALL' && styles.chipActive]}
-          onPress={() => setPlantFilter('ALL')}
+          onPress={() => setPlantFilter('all')}
+          style={[styles.plantChip, plantFilter === 'all' && styles.plantChipActive]}
         >
-          <Text style={[styles.chipText, plantFilter === 'ALL' && styles.chipTextActive]}>All Plants</Text>
+          <Text style={[styles.filterText, plantFilter === 'all' && { color: '#fff' }]}>All Plants</Text>
         </TouchableOpacity>
-        {PLANTS.map(p => (
+        {state.plants.map(p => (
           <TouchableOpacity
             key={p.id}
-            style={[styles.chip, plantFilter === p.id && styles.chipActive, plantFilter === p.id && { borderColor: p.color }]}
             onPress={() => setPlantFilter(p.id)}
+            style={[styles.plantChip, plantFilter === p.id && { backgroundColor: p.color, borderColor: p.color }]}
           >
-            <Text style={[styles.chipText, plantFilter === p.id && { color: p.color }]}>{p.name}</Text>
+            <Text style={[styles.filterText, plantFilter === p.id && { color: '#fff' }]}>{p.code || p.name}</Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
+
+      {/* Count */}
+      <Text style={styles.count}>
+        {filteredTasks.length} task{filteredTasks.length !== 1 ? 's' : ''}
+      </Text>
 
       {/* Task List */}
       <FlatList
-        data={filtered}
+        data={filteredTasks}
         keyExtractor={item => item.id}
-        contentContainerStyle={{ padding: 16, paddingBottom: 80 }}
+        renderItem={renderItem}
+        contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <TaskCard
-            task={item}
-            onPress={() => navigation.navigate('TaskDetail', { task: item })}
-          />
-        )}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={{ fontSize: 40 }}>🎉</Text>
-            <Text style={styles.emptyTitle}>All Clear!</Text>
-            <Text style={styles.emptySub}>No tasks match this filter.</Text>
-          </View>
+          <EmptyState
+            emoji="🎯"
+            title={search ? 'No results found' : 'No tasks here'}
+            subtitle={search ? 'Try a different search' : 'All clear for this filter!'}
+          />
         }
       />
+
+      <FAB onPress={() => setFabOpen(true)} />
+      <FABSheet visible={fabOpen} onClose={() => setFabOpen(false)} />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe:          { flex: 1, backgroundColor: COLORS.bg0 },
-  header:        { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
-  title:         { fontSize: 22, fontWeight: '700', color: COLORS.text1 },
-  sub:           { fontSize: 13, color: COLORS.text2 },
-  searchRow:     { flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginBottom: 10, backgroundColor: COLORS.bg2, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: COLORS.border },
-  searchInput:   { flex: 1, color: COLORS.text1, fontSize: 14 },
-  chipRow:       { flexDirection: 'row', paddingHorizontal: 12, marginBottom: 4, flexWrap: 'wrap', gap: 6 },
-  chip:          { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: COLORS.bg2, borderWidth: 1, borderColor: COLORS.border },
-  chipActive:    { backgroundColor: 'rgba(79,124,255,0.15)', borderColor: COLORS.accent },
-  chipText:      { fontSize: 12, fontWeight: '500', color: COLORS.text2 },
-  chipTextActive:{ color: COLORS.accent },
-  empty:         { alignItems: 'center', paddingTop: 60 },
-  emptyTitle:    { fontSize: 18, fontWeight: '600', color: COLORS.text1, marginTop: 12 },
-  emptySub:      { fontSize: 13, color: COLORS.text2, marginTop: 6 },
+  safe:   { flex: 1, backgroundColor: COLORS.bg },
+  header: {
+    flexDirection:   'row',
+    alignItems:      'center',
+    justifyContent:  'space-between',
+    paddingHorizontal: SPACING.lg,
+    paddingTop:      SPACING.lg,
+    paddingBottom:   SPACING.md,
+  },
+  title: { color: COLORS.text, fontSize: 28, fontWeight: FONT.bold },
+  overdueAlert: {
+    backgroundColor: COLORS.dangerDim,
+    borderRadius:    RADIUS.full,
+    paddingVertical: 4, paddingHorizontal: 12,
+    borderWidth: 1, borderColor: COLORS.danger + '30',
+  },
+  overdueText: { color: COLORS.danger, fontSize: 12, fontWeight: FONT.semibold },
+  searchBar: {
+    flexDirection:   'row',
+    alignItems:      'center',
+    backgroundColor: COLORS.card,
+    borderWidth:     1, borderColor: COLORS.border,
+    borderRadius:    RADIUS.lg,
+    marginHorizontal: SPACING.lg,
+    marginBottom:    SPACING.md,
+    paddingHorizontal: SPACING.md,
+    gap:             SPACING.sm,
+  },
+  searchIcon:  { fontSize: 14 },
+  searchInput: { flex: 1, color: COLORS.text, fontSize: 14, paddingVertical: 12 },
+  filterRow:   { marginBottom: SPACING.sm },
+  filterChip: {
+    paddingVertical: 6, paddingHorizontal: 16,
+    borderRadius:   RADIUS.full,
+    borderWidth: 1, borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+  },
+  filterChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  plantChip: {
+    paddingVertical: 5, paddingHorizontal: 14,
+    borderRadius: RADIUS.full,
+    borderWidth: 1, borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+  },
+  plantChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  filterText: { color: COLORS.textSub, fontSize: 13, fontWeight: FONT.medium },
+  count: {
+    color: COLORS.textMuted, fontSize: 12,
+    paddingHorizontal: SPACING.lg, marginBottom: SPACING.sm,
+  },
+  list: { paddingHorizontal: SPACING.lg, paddingBottom: 100 },
 });

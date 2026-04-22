@@ -39,7 +39,7 @@ export const CHECKLISTS = [
 
 export const TASK_STATUS = {
   PENDING:   'pending',
-  COMPLETED: 'completed',
+  COMPLETED: 'completed',  // consistent key — never use 'done'
   OVERDUE:   'overdue',
 };
 

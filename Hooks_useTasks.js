@@ -1,27 +1,35 @@
 import { useApp } from './Context_AppContext';
-import { groupTasksByStatus, groupTasksByPlant } from './Utils_helpers';
 import { useMemo } from 'react';
 
 export function useTasks() {
-  const { state, completeTask, refreshTasks } = useApp();
-  const { tasks, loading } = state;
+  const { state, completeTask, deleteTask, getTodayStats } = useApp();
+  const { tasks } = state;
 
-  const grouped = useMemo(() => groupTasksByStatus(tasks), [tasks]);
-  const byPlant = useMemo(() => groupTasksByPlant(tasks), [tasks]);
+  const grouped = useMemo(() => ({
+    overdue:   tasks.filter(t => t.status === 'overdue'),
+    pending:   tasks.filter(t => t.status === 'pending'),
+    completed: tasks.filter(t => t.status === 'completed'),
+  }), [tasks]);
 
-  const total     = tasks.length;
-  const doneCount = grouped.done.length;
-  const pct       = total > 0 ? Math.round((doneCount / total) * 100) : 0;
+  const byPlant = useMemo(() =>
+    tasks.reduce((acc, t) => {
+      if (!acc[t.plantId]) acc[t.plantId] = [];
+      acc[t.plantId].push(t);
+      return acc;
+    }, {}),
+    [tasks]
+  );
+
+  const stats = getTodayStats();
 
   return {
     tasks,
-    loading,
     grouped,
     byPlant,
-    total,
-    doneCount,
-    pct,
+    total:     stats.total,
+    doneCount: stats.completed,
+    pct:       stats.compliance,
     completeTask,
-    refreshTasks,
+    deleteTask,
   };
 }

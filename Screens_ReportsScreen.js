@@ -1,26 +1,84 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity,
+  View, Text, ScrollView, StyleSheet,
+  TouchableOpacity, Animated, Share, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { COLORS, SPACING, RADIUS, FONT } from './Constants_theme';
+import Svg, { Circle, Rect } from 'react-native-svg';
+import { SEMANTIC, SPACING, RADIUS, FONT, SHADOW } from './Constants_theme';
+import { useTheme } from './Context_ThemeContext';
 import { Card, Row, Spacer, ProgressBar, SectionHeader } from './Components_UIComponents';
 import { useApp } from './Context_AppContext';
 import { MONTHS } from './Constants_data';
 import dayjs from 'dayjs';
 
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+// ─── Animated compliance ring ─────────────────────────────────────────────────
+function ComplianceRing({ value, color, size = 120, stroke = 10 }) {
+  const radius = (size - stroke) / 2;
+  const circ   = 2 * Math.PI * radius;
+  const anim   = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(anim, { toValue: value, duration: 1100, useNativeDriver: false }).start();
+  }, [value]);
+
+  const offset = anim.interpolate({ inputRange: [0, 100], outputRange: [circ, 0] });
+
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <Svg width={size} height={size} style={{ position: 'absolute' }}>
+        <Circle cx={size/2} cy={size/2} r={radius}
+          stroke="rgba(255,255,255,0.08)" strokeWidth={stroke} fill="transparent"
+          rotation="-90" origin={`${size/2},${size/2}`} />
+        <AnimatedCircle cx={size/2} cy={size/2} r={radius}
+          stroke={color} strokeWidth={stroke} fill="transparent"
+          strokeDasharray={circ} strokeDashoffset={offset}
+          strokeLinecap="round" rotation="-90" origin={`${size/2},${size/2}`} />
+      </Svg>
+      <Text style={{ color, fontSize: 22, fontWeight: FONT.extrabold }}>{value}%</Text>
+      <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, marginTop: 2 }}>compliance</Text>
+    </View>
+  );
+}
+
+// ─── Mini bar chart (weekly trend) ───────────────────────────────────────────
+function WeeklyChart({ data, color }) {
+  const max    = Math.max(...data.map(d => d.value), 1);
+  const barW   = 28;
+  const chartH = 60;
+
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: chartH + 24 }}>
+      {data.map((d, i) => {
+        const h = Math.max((d.value / max) * chartH, 3);
+        return (
+          <View key={i} style={{ alignItems: 'center', gap: 4 }}>
+            <View style={{ width: barW, height: chartH, justifyContent: 'flex-end' }}>
+              <View style={{
+                width: barW, height: h,
+                backgroundColor: i === data.length - 1 ? color : color + '55',
+                borderRadius: 4,
+              }} />
+            </View>
+            <Text style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>{d.label}</Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 export default function ReportsScreen() {
-  const { state, getMonthlyStats, getPlantStats } = useApp();
-  const now  = dayjs();
+  const { colors }   = useTheme();
+  const { state, getMonthlyStats } = useApp();
+  const now          = dayjs();
   const [month, setMonth] = useState(now.month() + 1);
   const [year,  setYear]  = useState(now.year());
 
-  const monthlyStats = useMemo(() =>
-    getMonthlyStats(month, year),
-    [month, year, state.tasks]
-  );
+  const monthlyStats = useMemo(() => getMonthlyStats(month, year), [month, year, state.tasks]);
 
-  // Monthly tasks breakdown
   const monthStart = dayjs(`${year}-${String(month).padStart(2,'0')}-01`).format('YYYY-MM-DD');
   const monthEnd   = dayjs(monthStart).endOf('month').format('YYYY-MM-DD');
   const monthTasks = state.tasks.filter(t => t.date >= monthStart && t.date <= monthEnd);
@@ -34,163 +92,172 @@ export default function ReportsScreen() {
       const pct       = tasks.length > 0 ? Math.round((completed / tasks.length) * 100) : 0;
       return { ...plant, tasks: tasks.length, completed, pending, overdue, pct };
     }),
-    [monthTasks, state.plants]
+    [monthTasks]
   );
 
-  const checklistBreakdown = useMemo(() =>
-    state.checklists.map(cl => {
-      const tasks     = monthTasks.filter(t => t.checklistId === cl.id);
-      const completed = tasks.filter(t => t.status === 'completed').length;
-      return { ...cl, total: tasks.length, completed };
-    }).filter(c => c.total > 0),
-    [monthTasks, state.checklists]
-  );
+  // Weekly trend data (last 6 weeks)
+  const weeklyData = useMemo(() => {
+    return Array.from({ length: 6 }, (_, i) => {
+      const weekStart = dayjs().subtract(5 - i, 'week').startOf('week').format('YYYY-MM-DD');
+      const weekEnd   = dayjs().subtract(5 - i, 'week').endOf('week').format('YYYY-MM-DD');
+      const wTasks    = state.tasks.filter(t => t.date >= weekStart && t.date <= weekEnd);
+      const done      = wTasks.filter(t => t.status === 'completed').length;
+      const pct       = wTasks.length > 0 ? Math.round((done / wTasks.length) * 100) : 0;
+      return { label: `W${i + 1}`, value: pct };
+    });
+  }, [state.tasks]);
 
-  const complianceColor =
-    monthlyStats.compliance >= 80 ? COLORS.success :
-    monthlyStats.compliance >= 50 ? COLORS.warning  : COLORS.danger;
+  // Smart insight
+  const insight = useMemo(() => {
+    const prevMonthStats = getMonthlyStats(month === 1 ? 12 : month - 1, month === 1 ? year - 1 : year);
+    const diff = monthlyStats.compliance - (prevMonthStats?.compliance || 0);
+    if (diff > 10)  return { icon: '🚀', text: `Compliance up ${diff}% vs last month!`, color: SEMANTIC.success };
+    if (diff < -10) return { icon: '⚠️', text: `Compliance dropped ${Math.abs(diff)}% vs last month`, color: SEMANTIC.danger };
+    if (monthlyStats.compliance >= 90) return { icon: '🏆', text: 'Excellent compliance this month!', color: SEMANTIC.success };
+    if (monthlyStats.compliance === 0) return { icon: '📭', text: 'No tasks recorded yet this month', color: SEMANTIC.warning };
+    return { icon: '📊', text: `${monthlyStats.compliance}% compliance this month`, color: SEMANTIC.primary };
+  }, [monthlyStats]);
+
+  const compColor = monthlyStats.compliance >= 80 ? SEMANTIC.success
+    : monthlyStats.compliance >= 50 ? SEMANTIC.warning : SEMANTIC.danger;
+
+  const exportReport = async () => {
+    const lines = [
+      `Safety Checklist Report — ${MONTHS[month-1]} ${year}`,
+      `${'='.repeat(44)}`,
+      `Total Tasks   : ${monthlyStats.total}`,
+      `Completed     : ${monthlyStats.completed}`,
+      `Compliance    : ${monthlyStats.compliance}%`,
+      '',
+      'Plant-wise:',
+      ...plantBreakdown.map(p => `  ${p.name}: ${p.pct}% (${p.completed}/${p.tasks})`),
+    ];
+    try {
+      await Share.share({ message: lines.join('\n'), title: 'Safety Report' });
+    } catch {
+      Alert.alert('Error', 'Could not share report.');
+    }
+  };
+
+  const prevMonth = () => { if (month === 1) { setMonth(12); setYear(y => y - 1); } else setMonth(m => m - 1); };
+  const nextMonth = () => { if (month === 12) { setMonth(1); setYear(y => y + 1); } else setMonth(m => m + 1); };
+
+  const c = colors;
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
+      <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: 80 }} showsVerticalScrollIndicator={false}>
 
-        <Text style={styles.title}>Reports</Text>
+        {/* Header */}
+        <Row style={{ justifyContent: 'space-between', marginBottom: SPACING.lg }}>
+          <Text style={{ color: c.text, fontSize: 28, fontWeight: FONT.bold }}>Reports 📊</Text>
+          <TouchableOpacity
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: c.bgCard, borderRadius: RADIUS.md, paddingVertical: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: c.border }}
+            onPress={exportReport}
+          >
+            <Text style={{ color: SEMANTIC.primary, fontSize: 13, fontWeight: FONT.semibold }}>⬆ Export</Text>
+          </TouchableOpacity>
+        </Row>
 
         {/* Month Picker */}
-        <ScrollView
-          horizontal showsHorizontalScrollIndicator={false}
-          style={{ marginBottom: SPACING.lg }}
-          contentContainerStyle={{ gap: SPACING.sm }}
-        >
-          {MONTHS.map((m, i) => (
-            <TouchableOpacity
-              key={m}
-              onPress={() => setMonth(i + 1)}
-              style={[styles.monthChip, month === i + 1 && styles.monthChipActive]}
-            >
-              <Text style={[styles.monthText, month === i + 1 && { color: '#fff' }]}>
-                {m.slice(0, 3)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        <Row style={{ justifyContent: 'center', alignItems: 'center', gap: SPACING.xl, backgroundColor: c.bgCard, borderRadius: RADIUS.lg, padding: SPACING.md, borderWidth: 1, borderColor: c.border, marginBottom: SPACING.lg }}>
+          <TouchableOpacity onPress={prevMonth}>
+            <Text style={{ color: c.text, fontSize: 22 }}>‹</Text>
+          </TouchableOpacity>
+          <Text style={{ color: c.text, fontSize: 16, fontWeight: FONT.semibold, minWidth: 150, textAlign: 'center' }}>
+            {MONTHS[month - 1]} {year}
+          </Text>
+          <TouchableOpacity onPress={nextMonth}>
+            <Text style={{ color: c.text, fontSize: 22 }}>›</Text>
+          </TouchableOpacity>
+        </Row>
 
-        {/* Summary Card */}
-        <Card glow style={styles.summaryCard}>
-          <Text style={styles.summaryMonth}>{MONTHS[month - 1]} {year}</Text>
-          <Row style={{ justifyContent: 'space-between', alignItems: 'flex-end', marginTop: SPACING.sm }}>
-            <View>
-              <Text style={[styles.compliancePct, { color: complianceColor }]}>
+        {/* Smart insight banner */}
+        <View style={{ backgroundColor: insight.color + '18', borderRadius: RADIUS.lg, padding: SPACING.md, borderWidth: 1, borderColor: insight.color + '30', marginBottom: SPACING.lg, flexDirection: 'row', alignItems: 'center', gap: SPACING.sm }}>
+          <Text style={{ fontSize: 20 }}>{insight.icon}</Text>
+          <Text style={{ color: insight.color, fontSize: 13, fontWeight: FONT.medium, flex: 1 }}>{insight.text}</Text>
+        </View>
+
+        {/* Hero compliance summary */}
+        <Card glow style={{ marginBottom: SPACING.lg, padding: SPACING.xl }}>
+          <Row style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: c.textSub, fontSize: 12, fontWeight: FONT.medium, letterSpacing: 0.5 }}>
+                {MONTHS[month-1].toUpperCase()} {year}
+              </Text>
+              {/* HIERARCHY: big % first */}
+              <Text style={{ color: compColor, fontSize: 48, fontWeight: FONT.extrabold, lineHeight: 56 }}>
                 {monthlyStats.compliance}%
               </Text>
-              <Text style={styles.complianceLabel}>Compliance Rate</Text>
+              <Text style={{ color: c.text, fontSize: 16, fontWeight: FONT.semibold }}>Compliance Rate</Text>
+              <Spacer size={SPACING.md} />
+              <ProgressBar progress={monthlyStats.compliance} color={compColor} height={8} />
+              <Row style={{ marginTop: SPACING.md, gap: SPACING.xl }}>
+                <View>
+                  <Text style={{ color: c.text, fontSize: 20, fontWeight: FONT.bold }}>{monthlyStats.total}</Text>
+                  <Text style={{ color: c.textSub, fontSize: 11 }}>Total</Text>
+                </View>
+                <View>
+                  <Text style={{ color: SEMANTIC.success, fontSize: 20, fontWeight: FONT.bold }}>{monthlyStats.completed}</Text>
+                  <Text style={{ color: c.textSub, fontSize: 11 }}>Done</Text>
+                </View>
+                <View>
+                  <Text style={{ color: SEMANTIC.danger, fontSize: 20, fontWeight: FONT.bold }}>{monthlyStats.total - monthlyStats.completed}</Text>
+                  <Text style={{ color: c.textSub, fontSize: 11 }}>Missed</Text>
+                </View>
+              </Row>
             </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text style={styles.statNum}>{monthlyStats.total}</Text>
-              <Text style={styles.statLabel}>Total Tasks</Text>
-            </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text style={[styles.statNum, { color: COLORS.success }]}>{monthlyStats.completed}</Text>
-              <Text style={styles.statLabel}>Completed</Text>
-            </View>
+            <ComplianceRing value={monthlyStats.compliance} color={compColor} />
           </Row>
-          <Spacer size={SPACING.md} />
-          <ProgressBar progress={monthlyStats.compliance} color={complianceColor} height={10} />
         </Card>
 
-        {/* Quick Stats */}
+        {/* Weekly trend */}
+        <SectionHeader title="Weekly Trend" />
+        <Card style={{ marginBottom: SPACING.lg, padding: SPACING.lg }}>
+          <WeeklyChart data={weeklyData} color={SEMANTIC.primary} />
+        </Card>
+
+        {/* Quick stat pills */}
         <Row style={{ gap: SPACING.sm, marginBottom: SPACING.lg }}>
           {[
-            { label: 'Pending', value: monthTasks.filter(t => t.status === 'pending').length,   color: COLORS.warning },
-            { label: 'Overdue', value: monthTasks.filter(t => t.status === 'overdue').length,   color: COLORS.danger  },
-            { label: 'Done',    value: monthTasks.filter(t => t.status === 'completed').length, color: COLORS.success },
+            { label: 'Pending', value: monthTasks.filter(t => t.status === 'pending').length,   color: SEMANTIC.warning },
+            { label: 'Overdue', value: monthTasks.filter(t => t.status === 'overdue').length,   color: SEMANTIC.danger  },
+            { label: 'Done',    value: monthTasks.filter(t => t.status === 'completed').length, color: SEMANTIC.success },
           ].map(s => (
-            <Card key={s.label} style={[styles.quickStat, { flex: 1, borderColor: s.color + '20' }]}>
-              <Text style={[styles.quickValue, { color: s.color }]}>{s.value}</Text>
-              <Text style={styles.quickLabel}>{s.label}</Text>
+            <Card key={s.label} style={{ flex: 1, padding: SPACING.md, alignItems: 'center' }}>
+              <Text style={{ color: s.color, fontSize: 24, fontWeight: FONT.bold }}>{s.value}</Text>
+              <Text style={{ color: c.textSub, fontSize: 11, marginTop: 2 }}>{s.label}</Text>
             </Card>
           ))}
         </Row>
 
-        {/* Plant Breakdown */}
+        {/* Plant-wise compliance */}
         <SectionHeader title="Plant-wise Compliance" />
-        {plantBreakdown.map(p => (
-          <Card key={p.id} style={styles.plantCard}>
-            <Row style={{ justifyContent: 'space-between', marginBottom: SPACING.sm }}>
-              <Row style={{ gap: SPACING.sm }}>
-                <View style={[styles.dot, { backgroundColor: p.color }]} />
-                <Text style={styles.plantName}>{p.name}</Text>
-              </Row>
-              <Text style={[styles.plantPct, {
-                color: p.pct >= 80 ? COLORS.success : p.pct >= 50 ? COLORS.warning : COLORS.danger
-              }]}>{p.pct}%</Text>
-            </Row>
-            <ProgressBar progress={p.pct} color={p.color} height={6} />
-            <Row style={{ marginTop: SPACING.sm, gap: SPACING.lg }}>
-              <Text style={styles.miniStat}>✅ {p.completed}</Text>
-              <Text style={styles.miniStat}>⏳ {p.pending}</Text>
-              <Text style={styles.miniStat}>🚨 {p.overdue}</Text>
-              <Text style={[styles.miniStat, { marginLeft: 'auto' }]}>{p.tasks} total</Text>
-            </Row>
-          </Card>
-        ))}
-
-        {checklistBreakdown.length > 0 && (
-          <>
-            <Spacer size={SPACING.sm} />
-            <SectionHeader title="Checklist Performance" />
-            {checklistBreakdown.map(cl => (
-              <Card key={cl.id} style={styles.clCard}>
-                <Row style={{ justifyContent: 'space-between', marginBottom: 6 }}>
-                  <Text style={styles.clName} numberOfLines={1}>{cl.name}</Text>
-                  <Text style={styles.clPct}>
-                    {cl.total > 0 ? Math.round((cl.completed / cl.total) * 100) : 0}%
-                  </Text>
+        {plantBreakdown.map(p => {
+          const pc = p.pct >= 80 ? SEMANTIC.success : p.pct >= 50 ? SEMANTIC.warning : SEMANTIC.danger;
+          return (
+            <Card key={p.id} style={{ marginBottom: SPACING.sm, padding: SPACING.md }}>
+              <Row style={{ justifyContent: 'space-between', marginBottom: SPACING.sm }}>
+                <Row style={{ gap: SPACING.sm }}>
+                  {/* Plant color — indicator only, not decorative rainbow */}
+                  <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: p.color }} />
+                  <Text style={{ color: c.text, fontSize: 14, fontWeight: FONT.medium }}>{p.name}</Text>
                 </Row>
-                <ProgressBar
-                  progress={cl.total > 0 ? (cl.completed / cl.total) * 100 : 0}
-                  color={COLORS.primary}
-                  height={4}
-                />
-                <Text style={styles.clSub}>{cl.no} · {cl.completed}/{cl.total}</Text>
-              </Card>
-            ))}
-          </>
-        )}
+                <Text style={{ color: pc, fontSize: 14, fontWeight: FONT.bold }}>{p.pct}%</Text>
+              </Row>
+              <ProgressBar progress={p.pct} color={p.color} height={6} />
+              <Row style={{ marginTop: SPACING.sm, gap: SPACING.lg }}>
+                <Text style={{ color: c.textMuted, fontSize: 11 }}>✅ {p.completed}</Text>
+                <Text style={{ color: c.textMuted, fontSize: 11 }}>⏳ {p.pending}</Text>
+                <Text style={{ color: c.textMuted, fontSize: 11 }}>🚨 {p.overdue}</Text>
+                <Text style={{ color: c.textMuted, fontSize: 11, marginLeft: 'auto' }}>{p.tasks} total</Text>
+              </Row>
+            </Card>
+          );
+        })}
 
-        <Spacer size={80} />
+        <Spacer size={SPACING.xl} />
       </ScrollView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safe:    { flex: 1, backgroundColor: COLORS.bg },
-  content: { padding: SPACING.lg },
-  title:   { color: COLORS.text, fontSize: 28, fontWeight: FONT.bold, marginBottom: SPACING.lg },
-  monthChip: {
-    paddingVertical: 6, paddingHorizontal: 14,
-    borderRadius: RADIUS.full, borderWidth: 1, borderColor: COLORS.border,
-    backgroundColor: COLORS.card,
-  },
-  monthChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  monthText:       { color: COLORS.textSub, fontSize: 13, fontWeight: FONT.medium },
-  summaryCard:     { marginBottom: SPACING.lg },
-  summaryMonth:    { color: COLORS.textSub, fontSize: 13, fontWeight: FONT.medium },
-  compliancePct:   { fontSize: 48, fontWeight: FONT.extrabold, lineHeight: 56 },
-  complianceLabel: { color: COLORS.textSub, fontSize: 12 },
-  statNum:   { color: COLORS.text, fontSize: 22, fontWeight: FONT.bold },
-  statLabel: { color: COLORS.textSub, fontSize: 11, marginTop: 2 },
-  quickStat: { padding: SPACING.md, alignItems: 'center' },
-  quickValue:{ fontSize: 24, fontWeight: FONT.bold },
-  quickLabel:{ color: COLORS.textSub, fontSize: 11, marginTop: 2 },
-  plantCard: { marginBottom: SPACING.sm, padding: SPACING.md },
-  dot:       { width: 10, height: 10, borderRadius: 5 },
-  plantName: { color: COLORS.text, fontSize: 14, fontWeight: FONT.medium },
-  plantPct:  { fontSize: 14, fontWeight: FONT.bold },
-  miniStat:  { color: COLORS.textMuted, fontSize: 11 },
-  clCard:    { marginBottom: SPACING.sm, padding: SPACING.md },
-  clName:    { color: COLORS.text, fontSize: 13, fontWeight: FONT.medium, flex: 1, marginRight: SPACING.sm },
-  clPct:     { color: COLORS.primary, fontSize: 13, fontWeight: FONT.bold },
-  clSub:     { color: COLORS.textMuted, fontSize: 11, marginTop: 4, fontFamily: 'monospace' },
-});

@@ -118,7 +118,7 @@ export default function SplashScreen({ onDone }) {
         ]),
         Animated.sequence([
           Animated.delay(T.barDelay + 100),
-          Animated.timing(barWidth, { toValue: 1, duration: T.barDur, useNativeDriver: true }),
+          Animated.timing(barWidth, { toValue: 1, duration: T.barDur, useNativeDriver: false }),
         ]),
 
         // Screen fade out → call onDone

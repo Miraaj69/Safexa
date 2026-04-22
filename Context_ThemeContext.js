@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { THEMES, SEMANTIC, SPACING, RADIUS, FONT, SHADOW } from './Constants_theme';
 
 const ThemeContext = createContext(null);
-const THEME_KEY = 'safexa_theme';
+const THEME_KEY = 'safexa_theme_v3';
 
 export function ThemeProvider({ children }) {
   const [themeName, setThemeNameState] = useState('dark');
@@ -17,18 +17,31 @@ export function ThemeProvider({ children }) {
   const setTheme = (name) => {
     if (!THEMES[name]) return;
     setThemeNameState(name);
-    AsyncStorage.setItem(THEME_KEY, name);
+    AsyncStorage.setItem(THEME_KEY, name).catch(() => {});
   };
 
   const themeColors = { ...THEMES[themeName], ...SEMANTIC };
 
-  // Convenience: card style matching current theme
+  // Pre-built card style — used everywhere for consistency
   const cardStyle = {
     backgroundColor: themeColors.bgCard,
-    borderRadius:    RADIUS.lg,
+    borderRadius:    RADIUS.xl,
     borderWidth:     1,
     borderColor:     themeColors.border,
     ...SHADOW.card,
+  };
+
+  // Pre-built input style
+  const inputStyle = {
+    backgroundColor: themeColors.bgInput,
+    borderRadius:    RADIUS.lg,
+    borderWidth:     1,
+    borderColor:     themeColors.border,
+    paddingHorizontal: SPACING.md,
+    paddingVertical:   SPACING.sm + 2,
+    fontSize:        14,
+    color:           themeColors.text,
+    letterSpacing:   -0.1,
   };
 
   return (
@@ -41,6 +54,7 @@ export function ThemeProvider({ children }) {
       font:       FONT,
       shadow:     SHADOW,
       cardStyle,
+      inputStyle,
     }}>
       {children}
     </ThemeContext.Provider>

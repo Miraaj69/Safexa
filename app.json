@@ -2,7 +2,7 @@
   "expo": {
     "name": "Safexa",
     "slug": "safexa",
-    "owner": "nidhi2701",
+    "owner": "khushi69",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -44,7 +44,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "5173b39b-18f8-43c0-93d5-ae6ef7c07131"
+        "projectId": "51e5eb64-17e3-495f-96c3-6ebdf0be54e4"
       }
     }
   }
